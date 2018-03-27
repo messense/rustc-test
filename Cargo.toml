@@ -14,7 +14,6 @@ capture = []
 libc = "0.2"
 getopts = "0.2"
 term = "0.4"
-time = "0.1"
 
 [build-dependencies]
 rustc_version = "0.2.1"
