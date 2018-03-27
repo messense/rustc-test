@@ -68,7 +68,7 @@ pub mod test {
     pub use {Bencher, TestName, TestResult, TestDesc, TestDescAndFn, TestOpts, TrFailed,
              TrFailedMsg, TrIgnored, TrOk, Metric, MetricMap, StaticTestFn, StaticTestName,
              DynTestName, DynTestFn, run_test, test_main, test_main_static,
-             filter_tests, parse_opts, StaticBenchFn, ShouldPanic, Options};
+             filter_tests, parse_opts, StaticBenchFn, ShouldPanic, Options, assert_test_result};
 }
 
 pub mod stats;
@@ -306,6 +306,23 @@ pub fn test_main_static(tests: &[TestDescAndFn]) {
         })
         .collect();
     test_main(&args, owned_tests, Options::new())
+}
+
+/// Invoked when unit tests terminate. Should panic if the unit
+/// test is considered a failure. By default, invokes `report()`
+/// and checks for a `0` result.
+pub trait Termination {
+    fn report(self) -> i32;
+}
+
+impl Termination for () {
+    fn report(self) -> i32 {
+        0
+    }
+}
+
+pub fn assert_test_result<T: Termination>(result: T) {
+    assert_eq!(result.report(), 0);
 }
 
 #[derive(Copy, Clone, Debug)]
