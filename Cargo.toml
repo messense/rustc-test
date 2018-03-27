@@ -6,6 +6,10 @@ license = "MIT OR Apache-2.0"
 description = "A fork of Rust’s `test` crate that doesn’t require unstable language features."
 repository = "https://github.com/servo/rustc-test"
 
+[lib]
+name = "test"
+crate-type = ["dylib", "rlib"]
+
 [features]
 asm_black_box = []
 capture = []
