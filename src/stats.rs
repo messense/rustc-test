@@ -904,6 +904,7 @@ mod tests {
     }
 }
 
+/*
 #[cfg(test)]
 mod bench {
     use Bencher;
@@ -924,3 +925,4 @@ mod bench {
     #[bench]
     pub fn no_iter(_: &mut Bencher) {}
 }
+*/
