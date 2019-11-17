@@ -5,6 +5,7 @@ authors = ["The Rust Project Developers"]
 license = "MIT OR Apache-2.0"
 description = "A fork of Rust’s `test` crate that doesn’t require unstable language features."
 repository = "https://github.com/messense/rustc-test"
+edition = "2018"
 
 [lib]
 name = "test"
@@ -15,6 +16,6 @@ asm_black_box = []
 capture = []
 
 [dependencies]
-libc = "0.2"
+libc = { version = "0.2", default-features = false }
 getopts = "0.2"
 term = "0.6"
