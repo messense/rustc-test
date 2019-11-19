@@ -17,8 +17,6 @@
 // this crate, which relies on this attribute (rather than the value of `--crate-name` passed by
 // cargo) to detect this crate.
 
-#![crate_name = "test"]
-
 #![cfg_attr(feature = "asm_black_box", feature(asm))]
 #![cfg_attr(feature = "capture", feature(set_stdio))]
 

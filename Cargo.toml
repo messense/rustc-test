@@ -7,10 +7,6 @@ description = "A fork of Rust’s `test` crate that doesn’t require unstable l
 repository = "https://github.com/messense/rustc-test"
 edition = "2018"
 
-[lib]
-name = "test"
-crate-type = ["dylib", "rlib"]
-
 [features]
 asm_black_box = []
 capture = []
