@@ -84,7 +84,7 @@ pub trait Stats {
     /// by the constant `1.4826` to allow its use as a consistent estimator for the standard
     /// deviation.
     ///
-    /// See: <http://en.wikipedia.org/wiki/Median_absolute_deviation>
+    /// See: <https://en.wikipedia.org/wiki/Median_absolute_deviation>
     fn median_abs_dev(&self) -> f64;
 
     /// Median absolute deviation as a percent of the median. See `median_abs_dev` and `median`.
@@ -96,7 +96,7 @@ pub trait Stats {
     ///
     /// Calculated by linear interpolation between closest ranks.
     ///
-    /// See: <http://en.wikipedia.org/wiki/Percentile>
+    /// See: <https://en.wikipedia.org/wiki/Percentile>
     fn percentile(&self, pct: f64) -> f64;
 
     /// Quartiles of the sample: three values that divide the sample into four equal groups, each
@@ -204,7 +204,7 @@ impl Stats for [f64] {
     }
 
     fn median(&self) -> f64 {
-        self.percentile(50 as f64)
+        self.percentile(50_f64)
     }
 
     fn var(&self) -> f64 {
@@ -215,7 +215,7 @@ impl Stats for [f64] {
             let mut v: f64 = 0.0;
             for s in self {
                 let x = *s - mean;
-                v = v + x * x;
+                v += x * x;
             }
             // N.B., this is _supposed to be_ len-1, not len. If you
             // change it back to len, you will be calculating a
@@ -230,7 +230,7 @@ impl Stats for [f64] {
     }
 
     fn std_dev_pct(&self) -> f64 {
-        let hundred = 100 as f64;
+        let hundred = 100_f64;
         (self.std_dev() / self.mean()) * hundred
     }
 
@@ -244,7 +244,7 @@ impl Stats for [f64] {
     }
 
     fn median_abs_dev_pct(&self) -> f64 {
-        let hundred = 100 as f64;
+        let hundred = 100_f64;
         (self.median_abs_dev() / self.median()) * hundred
     }
 
@@ -257,11 +257,11 @@ impl Stats for [f64] {
     fn quartiles(&self) -> (f64, f64, f64) {
         let mut tmp = self.to_vec();
         local_sort(&mut tmp);
-        let first = 25f64;
+        let first = 25_f64;
         let a = percentile_of_sorted(&tmp, first);
-        let second = 50f64;
+        let second = 50_f64;
         let b = percentile_of_sorted(&tmp, second);
-        let third = 75f64;
+        let third = 75_f64;
         let c = percentile_of_sorted(&tmp, third);
         (a, b, c)
     }
@@ -281,7 +281,7 @@ fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
     }
     let zero: f64 = 0.0;
     assert!(zero <= pct);
-    let hundred = 100f64;
+    let hundred = 100_f64;
     assert!(pct <= hundred);
     if pct == hundred {
         return sorted_samples[sorted_samples.len() - 1];
@@ -302,12 +302,12 @@ fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
 /// It differs from trimming in that it does not change the number of samples,
 /// just changes the values of those that are outliers.
 ///
-/// See: <http://en.wikipedia.org/wiki/Winsorising>
+/// See: <https://en.wikipedia.org/wiki/Winsorising>
 pub fn winsorize(samples: &mut [f64], pct: f64) {
     let mut tmp = samples.to_vec();
     local_sort(&mut tmp);
     let lo = percentile_of_sorted(&tmp, pct);
-    let hundred = 100 as f64;
+    let hundred = 100_f64;
     let hi = percentile_of_sorted(&tmp, hundred - pct);
     for samp in samples {
         if *samp > hi {

@@ -1,36 +1,21 @@
 //! Benchmarking module.
+
 use super::{
-    event::CompletedTest,
-    options::BenchMode,
-    types::TestDesc,
-    test_result::TestResult,
-    Sender,
+    event::CompletedTest, options::BenchMode, test_result::TestResult, types::TestDesc, Sender,
 };
-#[cfg(feature = "capture")]
-use super::helpers::sink::Sink;
 
 use crate::stats;
-use std::time::{Duration, Instant};
 use std::cmp;
 #[cfg(feature = "capture")]
 use std::io;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
-/// A function that is opaque to the optimizer, to allow benchmarks to
-/// pretend to use outputs to assist in avoiding dead-code
-/// elimination.
-///
-/// This function is a no-op, and does not even read from `dummy`.
-#[cfg(all(feature = "asm_black_box", not(any(target_os = "asmjs", target_arch = "wasm32"))))]
-pub fn black_box<T>(dummy: T) -> T {
-    // we need to "use" the argument in some way LLVM can't
-    // introspect.
-    unsafe { asm!("" : : "r"(&dummy)) }
-    dummy
-}
+#[cfg(feature = "asm_black_box")]
+pub use std::hint::black_box;
 
-#[cfg(not(all(feature = "asm_black_box", not(any(target_os = "asmjs", target_arch = "wasm32")))))]
+#[cfg(not(feature = "asm_black_box"))]
 #[inline(never)]
 pub fn black_box<T>(dummy: T) -> T {
     dummy
@@ -84,17 +69,15 @@ pub fn fmt_bench_samples(bs: &BenchSamples) -> String {
     let median = bs.ns_iter_summ.median as usize;
     let deviation = (bs.ns_iter_summ.max - bs.ns_iter_summ.min) as usize;
 
-    output
-        .write_fmt(format_args!(
-            "{:>11} ns/iter (+/- {})",
-            fmt_thousands_sep(median, ','),
-            fmt_thousands_sep(deviation, ',')
-        ))
-        .unwrap();
+    write!(
+        output,
+        "{:>11} ns/iter (+/- {})",
+        fmt_thousands_sep(median, ','),
+        fmt_thousands_sep(deviation, ',')
+    )
+    .unwrap();
     if bs.mb_s != 0 {
-        output
-            .write_fmt(format_args!(" = {} MB/s", bs.mb_s))
-            .unwrap();
+        write!(output, " = {} MB/s", bs.mb_s).unwrap();
     }
     output
 }
@@ -108,9 +91,9 @@ fn fmt_thousands_sep(mut n: usize, sep: char) -> String {
         let base = 10_usize.pow(pow);
         if pow == 0 || trailing || n / base != 0 {
             if !trailing {
-                output.write_fmt(format_args!("{}", n / base)).unwrap();
+                write!(output, "{}", n / base).unwrap();
             } else {
-                output.write_fmt(format_args!("{:03}", n / base)).unwrap();
+                write!(output, "{:03}", n / base).unwrap();
             }
             if pow != 0 {
                 output.push(sep);
@@ -123,10 +106,6 @@ fn fmt_thousands_sep(mut n: usize, sep: char) -> String {
     output
 }
 
-fn ns_from_dur(dur: Duration) -> u64 {
-    dur.as_secs() * 1_000_000_000 + (dur.subsec_nanos() as u64)
-}
-
 fn ns_iter_inner<T, F>(inner: &mut F, k: u64) -> u64
 where
     F: FnMut() -> T,
@@ -135,7 +114,7 @@ where
     for _ in 0..k {
         black_box(inner());
     }
-    ns_from_dur(start.elapsed())
+    start.elapsed().as_nanos() as u64
 }
 
 pub fn iter<T, F>(inner: &mut F) -> stats::Summary
@@ -188,7 +167,7 @@ where
             return summ5;
         }
 
-        total_run = total_run + loop_run;
+        total_run += loop_run;
         // Longest we ever run for is 3s.
         if total_run > Duration::from_secs(3) {
             return summ5;
@@ -211,38 +190,19 @@ pub fn benchmark<F>(desc: TestDesc, monitor_ch: Sender<CompletedTest>, nocapture
 where
     F: FnMut(&mut Bencher),
 {
-    let mut bs = Bencher {
-        mode: BenchMode::Auto,
-        summary: None,
-        bytes: 0,
-    };
+    let mut bs = Bencher { mode: BenchMode::Auto, summary: None, bytes: 0 };
 
     let data = Arc::new(Mutex::new(Vec::new()));
-    let _oldio = if !nocapture {
-        Some((
-            #[cfg(feature = "capture")]
-            io::set_print(Some(Sink::new_boxed(&data))),
-            #[cfg(not(feature = "capture"))]
-            (),
 
-            #[cfg(feature = "capture")]
-            io::set_panic(Some(Sink::new_boxed(&data))),
-            #[cfg(not(feature = "capture"))]
-            (),
-        ))
-    } else {
-        None
-    };
+    if !nocapture {
+        #[cfg(feature = "capture")]
+        io::set_output_capture(Some(data.clone()));
+    }
 
     let result = catch_unwind(AssertUnwindSafe(|| bs.bench(f)));
 
     #[cfg(feature = "capture")]
-    {
-        if let Some((printio, panicio)) = _oldio {
-            io::set_print(printio);
-            io::set_panic(panicio);
-        }
-    }
+    io::set_output_capture(None);
 
     let test_result = match result {
         //bs.bench(f) {
@@ -250,20 +210,14 @@ where
             let ns_iter = cmp::max(ns_iter_summ.median as u64, 1);
             let mb_s = bs.bytes * 1000 / ns_iter;
 
-            let bs = BenchSamples {
-                ns_iter_summ,
-                mb_s: mb_s as usize,
-            };
+            let bs = BenchSamples { ns_iter_summ, mb_s: mb_s as usize };
             TestResult::TrBench(bs)
         }
         Ok(None) => {
             // iter not called, so no data.
             // FIXME: error in this case?
             let samples: &mut [f64] = &mut [0.0_f64; 1];
-            let bs = BenchSamples {
-                ns_iter_summ: stats::Summary::new(samples),
-                mb_s: 0,
-            };
+            let bs = BenchSamples { ns_iter_summ: stats::Summary::new(samples), mb_s: 0 };
             TestResult::TrBench(bs)
         }
         Err(_) => TestResult::TrFailed,
@@ -278,10 +232,6 @@ pub fn run_once<F>(f: F)
 where
     F: FnMut(&mut Bencher),
 {
-    let mut bs = Bencher {
-        mode: BenchMode::Single,
-        summary: None,
-        bytes: 0,
-    };
+    let mut bs = Bencher { mode: BenchMode::Single, summary: None, bytes: 0 };
     bs.bench(f);
 }

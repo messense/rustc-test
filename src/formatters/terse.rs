@@ -1,17 +1,14 @@
-use std::{
-    io,
-    io::prelude::Write,
-};
+use std::{io, io::prelude::Write};
 
-use crate::{
-    types::TestDesc,
-    time,
-    test_result::TestResult,
-    types::NamePadding,
-    console::{ConsoleTestState, OutputLocation},
-    bench::fmt_bench_samples,
-};
 use super::OutputFormatter;
+use crate::{
+    bench::fmt_bench_samples,
+    console::{ConsoleTestState, OutputLocation},
+    test_result::TestResult,
+    time,
+    types::NamePadding,
+    types::TestDesc,
+};
 
 // insert a '\n' after 100 tests in quiet mode
 const QUIET_MODE_MAX_COLUMN: usize = 100;
@@ -74,7 +71,7 @@ impl<T: Write> TerseFormatter<T> {
             // we insert a new line every 100 dots in order to flush the
             // screen when dealing with line-buffered output (e.g., piping to
             // `stamp` in the rust CI).
-            let out = format!(" {}/{}\n", self.test_count+1, self.total_test_count);
+            let out = format!(" {}/{}\n", self.test_count + 1, self.total_test_count);
             self.write_plain(&out)?;
         }
 
@@ -117,7 +114,7 @@ impl<T: Write> TerseFormatter<T> {
                 stdouts.push_str(&format!("---- {} stdout ----\n", f.name));
                 let output = String::from_utf8_lossy(stdout);
                 stdouts.push_str(&output);
-                stdouts.push_str("\n");
+                stdouts.push('\n');
             }
         }
         if !stdouts.is_empty() {
@@ -143,7 +140,7 @@ impl<T: Write> TerseFormatter<T> {
                 fail_out.push_str(&format!("---- {} stdout ----\n", f.name));
                 let output = String::from_utf8_lossy(stdout);
                 fail_out.push_str(&output);
-                fail_out.push_str("\n");
+                fail_out.push('\n');
             }
         }
         if !fail_out.is_empty() {
@@ -196,9 +193,9 @@ impl<T: Write> OutputFormatter for TerseFormatter<T> {
     ) -> io::Result<()> {
         match *result {
             TestResult::TrOk => self.write_ok(),
-            TestResult::TrFailed
-                | TestResult::TrFailedMsg(_)
-                | TestResult::TrTimedFail => self.write_failed(),
+            TestResult::TrFailed | TestResult::TrFailedMsg(_) | TestResult::TrTimedFail => {
+                self.write_failed()
+            }
             TestResult::TrIgnored => self.write_ignored(),
             TestResult::TrAllowedFail => self.write_allowed_fail(),
             TestResult::TrBench(ref bs) => {
@@ -214,7 +211,8 @@ impl<T: Write> OutputFormatter for TerseFormatter<T> {
     fn write_timeout(&mut self, desc: &TestDesc) -> io::Result<()> {
         self.write_plain(&format!(
             "test {} has been running for over {} seconds\n",
-            desc.name, time::TEST_WARN_TIMEOUT_S
+            desc.name,
+            time::TEST_WARN_TIMEOUT_S
         ))
     }
 
@@ -238,7 +236,7 @@ impl<T: Write> OutputFormatter for TerseFormatter<T> {
 
         let s = if state.allowed_fail > 0 {
             format!(
-                ". {} passed; {} failed ({} allowed); {} ignored; {} measured; {} filtered out\n\n",
+                ". {} passed; {} failed ({} allowed); {} ignored; {} measured; {} filtered out",
                 state.passed,
                 state.failed + state.allowed_fail,
                 state.allowed_fail,
@@ -248,12 +246,19 @@ impl<T: Write> OutputFormatter for TerseFormatter<T> {
             )
         } else {
             format!(
-                ". {} passed; {} failed; {} ignored; {} measured; {} filtered out\n\n",
+                ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
                 state.passed, state.failed, state.ignored, state.measured, state.filtered_out
             )
         };
 
         self.write_plain(&s)?;
+
+        if let Some(ref exec_time) = state.exec_time {
+            let time_str = format!("; finished in {}", exec_time);
+            self.write_plain(&time_str)?;
+        }
+
+        self.write_plain("\n\n")?;
 
         Ok(success)
     }

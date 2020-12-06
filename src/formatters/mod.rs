@@ -1,21 +1,18 @@
-use std::{
-    io,
-    io::prelude::Write,
-};
+use std::{io, io::prelude::Write};
 
 use crate::{
-    types::{TestDesc, TestName},
-    time,
+    console::ConsoleTestState,
     test_result::TestResult,
-    console::{ConsoleTestState},
+    time,
+    types::{TestDesc, TestName},
 };
 
-mod pretty;
 mod json;
+mod pretty;
 mod terse;
 
-pub(crate) use self::pretty::PrettyFormatter;
 pub(crate) use self::json::JsonFormatter;
+pub(crate) use self::pretty::PrettyFormatter;
 pub(crate) use self::terse::TerseFormatter;
 
 pub(crate) trait OutputFormatter {
@@ -39,5 +36,5 @@ pub(crate) fn write_stderr_delimiter(test_output: &mut Vec<u8>, test_name: &Test
         Some(_) => test_output.push(b'\n'),
         None => (),
     }
-    write!(test_output, "---- {} stderr ----\n", test_name).unwrap();
+    writeln!(test_output, "---- {} stderr ----", test_name).unwrap();
 }

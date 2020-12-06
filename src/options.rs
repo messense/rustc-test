@@ -41,7 +41,7 @@ pub enum OutputFormat {
     Json,
 }
 
-/// Whether ignored test should be runned or not
+/// Whether ignored test should be run or not
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RunIgnored {
     Yes,
@@ -72,10 +72,7 @@ pub struct Options {
 
 impl Options {
     pub fn new() -> Options {
-        Options {
-            display_output: false,
-            panic_abort: false,
-        }
+        Options { display_output: false, panic_abort: false }
     }
 
     pub fn display_output(mut self, display_output: bool) -> Options {

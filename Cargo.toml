@@ -12,6 +12,10 @@ asm_black_box = []
 capture = []
 
 [dependencies]
-libc = { version = "0.2", default-features = false }
 getopts = "0.2"
 term = "0.6"
+num_cpus = "1.13.0"
+cfg-if = "1.0.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2", default-features = false }

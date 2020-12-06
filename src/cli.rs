@@ -2,11 +2,10 @@
 
 use std::env;
 use std::path::PathBuf;
-use getopts;
 
-use super::options::{RunIgnored, ColorConfig, OutputFormat, Options};
-use super::time::TestTimeOptions;
 use super::helpers::isatty;
+use super::options::{ColorConfig, Options, OutputFormat, RunIgnored};
+use super::time::TestTimeOptions;
 
 #[derive(Debug)]
 pub struct TestOpts {
@@ -86,11 +85,7 @@ fn optgroups() -> getopts::Options {
             "Display one character per test instead of one line. \
              Alias to --format=terse",
         )
-        .optflag(
-            "",
-            "exact",
-            "Exactly match filters rather than by substring",
-        )
+        .optflag("", "exact", "Exactly match filters rather than by substring")
         .optopt(
             "",
             "color",
@@ -109,11 +104,7 @@ fn optgroups() -> getopts::Options {
             json   = Output a json document",
             "pretty|terse|json",
         )
-        .optflag(
-            "",
-            "show-output",
-            "Show captured stdout of successful tests"
-        )
+        .optflag("", "show-output", "Show captured stdout of successful tests")
         .optopt(
             "Z",
             "",
@@ -124,7 +115,7 @@ fn optgroups() -> getopts::Options {
         .optflagopt(
             "",
             "report-time",
-            "Show execution time of each test. Awailable values:
+            "Show execution time of each test. Available values:
             plain   = do not colorize the execution time (default);
             colored = colorize output according to the `color` parameter value;
 
@@ -133,9 +124,11 @@ fn optgroups() -> getopts::Options {
             `RUST_TEST_TIME_DOCTEST` environment variables.
 
             Expected format of environment variable is `VARIABLE=WARN_TIME,CRITICAL_TIME`.
+            Durations must be specified in milliseconds, e.g. `500,2000` means that the warn time
+            is 0.5 seconds, and the critical time is 2 seconds.
 
             Not available for --format=terse",
-            "plain|colored"
+            "plain|colored",
         )
         .optflag(
             "",
@@ -149,7 +142,7 @@ fn optgroups() -> getopts::Options {
             Expected format of environment variable is `VARIABLE=WARN_TIME,CRITICAL_TIME`.
 
             `CRITICAL_TIME` here means the limit that should not be exceeded by test.
-            "
+            ",
         );
     opts
 }
@@ -220,7 +213,7 @@ macro_rules! unstable_optflag {
         let opt = $matches.opt_present($option_name);
         if !$allow_unstable && opt {
             return Err(format!(
-                "The \"{}\" flag is only accepted on the nightly compiler",
+                "The \"{}\" flag is only accepted on the nightly compiler with -Z unstable-options",
                 $option_name
             ));
         }
@@ -280,7 +273,7 @@ fn parse_opts_impl(matches: getopts::Matches) -> OptRes {
     Ok(test_opts)
 }
 
-// FIXME: Copied from libsyntax until linkage errors are resolved. Issue #47566
+// FIXME: Copied from librustc_ast until linkage errors are resolved. Issue #47566
 fn is_nightly() -> bool {
     // Whether this is a feature-staged build, i.e., on the beta or stable channel
     let disable_unstable_features = option_env!("CFG_DISABLE_UNSTABLE_FEATURES").is_some();
@@ -290,11 +283,11 @@ fn is_nightly() -> bool {
     bootstrap || !disable_unstable_features
 }
 
-// Gets the CLI options assotiated with `report-time` feature.
+// Gets the CLI options associated with `report-time` feature.
 fn get_time_options(
     matches: &getopts::Matches,
-    allow_unstable: bool)
--> OptPartRes<Option<TestTimeOptions>> {
+    allow_unstable: bool,
+) -> OptPartRes<Option<TestTimeOptions>> {
     let report_time = unstable_optflag!(matches, allow_unstable, "report-time");
     let colored_opt_str = matches.opt_str("report-time");
     let mut report_time_colored = report_time && colored_opt_str == Some("colored".into());
@@ -336,17 +329,15 @@ fn get_test_threads(matches: &getopts::Matches) -> OptPartRes<Option<usize>> {
 fn get_format(
     matches: &getopts::Matches,
     quiet: bool,
-    allow_unstable: bool
+    allow_unstable: bool,
 ) -> OptPartRes<OutputFormat> {
-    let format = match matches.opt_str("format").as_ref().map(|s| &**s) {
+    let format = match matches.opt_str("format").as_deref() {
         None if quiet => OutputFormat::Terse,
         Some("pretty") | None => OutputFormat::Pretty,
         Some("terse") => OutputFormat::Terse,
         Some("json") => {
             if !allow_unstable {
-                return Err(
-                    "The \"json\" format is only accepted on the nightly compiler".into(),
-                );
+                return Err("The \"json\" format is only accepted on the nightly compiler".into());
             }
             OutputFormat::Json
         }
@@ -364,7 +355,7 @@ fn get_format(
 }
 
 fn get_color_config(matches: &getopts::Matches) -> OptPartRes<ColorConfig> {
-    let color = match matches.opt_str("color").as_ref().map(|s| &**s) {
+    let color = match matches.opt_str("color").as_deref() {
         Some("auto") | None => ColorConfig::AutoColor,
         Some("always") => ColorConfig::AlwaysColor,
         Some("never") => ColorConfig::NeverColor,
@@ -396,9 +387,7 @@ fn get_nocapture(matches: &getopts::Matches) -> OptPartRes<bool> {
 fn get_run_ignored(matches: &getopts::Matches, include_ignored: bool) -> OptPartRes<RunIgnored> {
     let run_ignored = match (include_ignored, matches.opt_present("ignored")) {
         (true, true) => {
-            return Err(
-                "the options --include-ignored and --ignored are mutually exclusive".into(),
-            );
+            return Err("the options --include-ignored and --ignored are mutually exclusive".into());
         }
         (true, false) => RunIgnored::Yes,
         (false, true) => RunIgnored::Only,
@@ -409,11 +398,7 @@ fn get_run_ignored(matches: &getopts::Matches, include_ignored: bool) -> OptPart
 }
 
 fn get_filter(matches: &getopts::Matches) -> OptPartRes<Option<String>> {
-    let filter = if !matches.free.is_empty() {
-        Some(matches.free[0].clone())
-    } else {
-        None
-    };
+    let filter = if !matches.free.is_empty() { Some(matches.free[0].clone()) } else { None };
 
     Ok(filter)
 }
@@ -423,9 +408,7 @@ fn get_allow_unstable(matches: &getopts::Matches) -> OptPartRes<bool> {
 
     if let Some(opt) = matches.opt_str("Z") {
         if !is_nightly() {
-            return Err(
-                "the option `Z` is only accepted on the nightly compiler".into(),
-            );
+            return Err("the option `Z` is only accepted on the nightly compiler".into());
         }
 
         match &*opt {

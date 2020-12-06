@@ -1,14 +1,14 @@
 //! Common types used by `libtest`.
 
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
-use super::options;
 use super::bench::Bencher;
+use super::options;
 
 pub use NamePadding::*;
-pub use TestName::*;
 pub use TestFn::*;
+pub use TestName::*;
 
 /// Type of the test according to the [rust book](https://doc.rust-lang.org/cargo/guide/tests.html)
 /// conventions.
@@ -59,10 +59,10 @@ impl TestName {
     }
 
     pub fn with_padding(&self, padding: NamePadding) -> TestName {
-        let name = match self {
-            &TestName::StaticTestName(name) => Cow::Borrowed(name),
-            &TestName::DynTestName(ref name) => Cow::Owned(name.clone()),
-            &TestName::AlignedTestName(ref name, _) => name.clone(),
+        let name = match *self {
+            TestName::StaticTestName(name) => Cow::Borrowed(name),
+            TestName::DynTestName(ref name) => Cow::Owned(name.clone()),
+            TestName::AlignedTestName(ref name, _) => name.clone(),
         };
 
         TestName::AlignedTestName(name, padding)
