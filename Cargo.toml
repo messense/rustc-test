@@ -1,6 +1,6 @@
 [package]
 name = "tester"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["The Rust Project Developers"]
 license = "MIT OR Apache-2.0"
 description = "A fork of Rust’s `test` crate that doesn’t require unstable language features."
