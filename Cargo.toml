@@ -13,7 +13,7 @@ capture = []
 
 [dependencies]
 getopts = "0.2"
-term = "0.6"
+term = "0.7"
 num_cpus = "1.13.0"
 cfg-if = "1.0.0"
 
